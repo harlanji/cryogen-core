@@ -11,7 +11,7 @@
             [cryogen-core.io :as cryogen-io]
             [cryogen-core.klipse :as klipse]
             [cryogen-core.markup :as m]
-            [cryogen-core.rss :as rss]
+            [cryogen-core.rss2 :as rss]
             [cryogen-core.sass :as sass]
             [cryogen-core.schemas :as schemas]
             [cryogen-core.sitemap :as sitemap]
@@ -170,7 +170,7 @@
   "Adds the uri and title of a post to the list of posts under each of its tags"
   [tags post]
   (reduce (fn [tags tag]
-            (update-in tags [tag] (fnil conj []) (select-keys post [:uri :title :content :date :enclosure])))
+            (update-in tags [tag] (fnil conj []) post))
           tags
           (:tags post)))
 
