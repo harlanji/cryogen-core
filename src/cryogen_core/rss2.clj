@@ -44,7 +44,7 @@
                                   :height (:height media-group)
                                   :width (:width media-group)
                                   :type (:type media-group)}]
-        ;description [::media/description {} (:description item)]
+        description [::media/description {} (:description item)]
         ]
     [::media/group {} title content thumbnail]))
 
@@ -71,7 +71,7 @@
         
         items (map make-item items)
         
-        channel [:channel {} title self-link items]
+        channel [:channel {} title self-link [:link {} (:site-url config)] [:description {} "description"] items]
         
         rss-doc [:rss {:version "2.0"} channel]]
         
