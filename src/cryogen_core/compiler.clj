@@ -90,7 +90,7 @@
   [^java.io.File page config markup]
   (with-open [rdr (java.io.PushbackReader. (io/reader page))]
     (let [re-root   (re-pattern (str "^.*?(" (:page-root config) "|" (:post-root config) ")/"))
-          page-fwd  (string/replace (str page) "\\" "/")    ;; make it work on Windows
+          page-fwd  (string/replace (str page) "\\" "/")    ;; make it work on Windows "
           page-name (if (:collapse-subdirs? config) (.getName page) (string/replace page-fwd re-root ""))
           file-name (string/replace page-name (re-pattern-from-ext (m/ext markup)) ".html")
           page-meta (read-page-meta page-name rdr)
@@ -170,7 +170,7 @@
   "Adds the uri and title of a post to the list of posts under each of its tags"
   [tags post]
   (reduce (fn [tags tag]
-            (update-in tags [tag] (fnil conj []) (select-keys post [:uri :title :content :date :enclosure])))
+            (update-in tags [tag] (fnil conj []) (select-keys post [:tags :uri :title :content :date :enclosure])))
           tags
           (:tags post)))
 
@@ -183,12 +183,12 @@
   "Groups the posts by month and year for archive sorting"
   [posts]
   (->> posts
-       (map #(select-keys % [:title :uri :date :formatted-archive-group :parsed-archive-group]))
+       (map #(select-keys % [:tags :title :uri :date :formatted-archive-group :parsed-archive-group]))
        (group-by :formatted-archive-group)
        (map (fn [[group posts]]
               {:group        group
                :parsed-group (:parsed-archive-group (get posts 0))
-               :posts        (map #(select-keys % [:title :uri :date]) posts)}))
+               :posts        (map #(select-keys % [:tags :title :uri :date]) posts)}))
        (sort-by :parsed-group)
        reverse))
 
@@ -458,6 +458,10 @@
             {:resources     folders
              :ignored-files (map #(re-pattern-from-ext (m/ext %)) (m/markups))}))))
 
+(defn is-twitter-post? [config post]
+  (some (into #{} (:preview-exclude-tags config))
+        (into [] (map :name (:tags post)))))
+
 (defn compile-assets
   "Generates all the html and copies over resources specified in the config"
   ([]
@@ -473,6 +477,9 @@
          posts-by-tag (group-by-tags posts)
          posts        (tag-posts posts config)
          latest-posts (->> posts (take recent-posts) vec)
+         preview-posts (filter #(not (is-twitter-post? config %)) posts)
+         _ (println "# of posts:" (count posts))
+         _ (println "# of previews:" (count preview-posts))
          pages        (map klipse/klipsify (read-pages config))
          home-page    (->> pages
                            (filter #(boolean (:home? %)))
@@ -516,7 +523,7 @@
      (compile-tags params posts-by-tag)
      (compile-tags-page params)
      (if previews?
-       (compile-preview-pages params posts)
+       (compile-preview-pages params preview-posts)
        (compile-index params))
      (compile-archives params posts)
      (when author-root-uri
