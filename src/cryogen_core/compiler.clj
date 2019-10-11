@@ -462,6 +462,13 @@
   (some (into #{} (:preview-exclude-tags config))
         (into [] (map :name (:tags post)))))
 
+(defn expand-tags [config e]
+  "Expands tags for a post into the name, uri form for use in templates."
+  (let [tag (key e)
+        posts (val e)
+        tagged-posts (map #(assoc % :tags-expanded (map (partial tag-info config) (:tags %))) posts)]
+    [tag tagged-posts]))
+
 (defn compile-assets
   "Generates all the html and copies over resources specified in the config"
   ([]
@@ -475,6 +482,7 @@
           :as   config} (resolve-config overrides)
          posts        (map klipse/klipsify (add-prev-next (read-posts config)))
          posts-by-tag (group-by-tags posts)
+         posts-by-tag-expanded (map (partial expand-tags config) posts-by-tag)
          posts        (tag-posts posts config)
          latest-posts (->> posts (take recent-posts) vec)
          preview-posts (filter #(not (is-twitter-post? config %)) posts)
@@ -520,7 +528,7 @@
      (copy-resources-from-markup-folders config)
      (compile-pages params other-pages)
      (compile-posts params posts)
-     (compile-tags params posts-by-tag)
+     (compile-tags params posts-by-tag-expanded)
      (compile-tags-page params)
      (if previews?
        (compile-preview-pages params preview-posts)
