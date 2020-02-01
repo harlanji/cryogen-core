@@ -132,6 +132,7 @@
             archive-fmt     (java.text.SimpleDateFormat. (:archive-group-format config) (Locale/getDefault))
             formatted-group (.format archive-fmt date)]
         {:date                    date
+         :cryogen/meta            page-meta
          :formatted-archive-group formatted-group
          :parsed-archive-group    (.parse archive-fmt formatted-group)
          :uri                     (page-uri file-name :post-root-uri config)
@@ -170,7 +171,7 @@
   "Adds the uri and title of a post to the list of posts under each of its tags"
   [tags post]
   (reduce (fn [tags tag]
-            (update-in tags [tag] (fnil conj []) (select-keys post [:tags :uri :title :content :date :enclosure])))
+            (update-in tags [tag] (fnil conj []) (select-keys post [:tags :uri :title :content :date :enclosure :cryogen/meta])))
           tags
           (:tags post)))
 
