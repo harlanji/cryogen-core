@@ -18,18 +18,22 @@
                (if enclosure {:enclosure   enclosure}))))
     posts))
 
-(defn make-channel [config posts]
+(defn make-channel 
+  ([config posts]
+  (make-channel config posts "feed"))
+
+  ([config posts tag]
   (apply
     (partial rss/channel-xml
              false
-             {:title         (:site-title config)
+             {:title         (get-in config [:rss-title tag] (str (:site-title config) " - " tag))
               :link          (:site-url config)
               :description   (:description config)
               :lastBuildDate (Date.)})
-    (posts-to-items (:site-url config) posts)))
+    (posts-to-items (:site-url config) posts))))
 
 (defn make-filtered-channels [{:keys [rss-filters blog-prefix] :as config} posts-by-tag]
   (doseq [filter rss-filters]
     (let [uri (cryogen-io/path "/" blog-prefix (str (name filter) ".xml"))]
       (println "\t-->" (cyan uri))
-      (cryogen-io/create-file uri (make-channel config (get posts-by-tag filter))))))
+      (cryogen-io/create-file uri (make-channel config (get posts-by-tag filter) (name filter))))))
