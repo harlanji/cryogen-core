@@ -292,11 +292,16 @@
     (println (blue "compiling tags"))
     (cryogen-io/create-folder (cryogen-io/path "/" blog-prefix tag-root-uri))
     (doseq [[tag posts] posts-by-tag]
-      (let [{:keys [name uri]} (tag-info params tag)]
-        (println "-->" (cyan uri))
+      (let [{:keys [name uri]} (tag-info params tag)
+            template-path (str "/html/tag-" tag ".html")
+            template-file (io/file (str "/Users/hi/p/harlanji-web/app/themes/harlanji" template-path))
+            template-path (if (.exists template-file)
+                            template-path
+            	                "/html/tag.html")]
+        (println "-->" (cyan uri) " " (red template-path))
         (write-html uri
                     params
-                    (render-file "/html/tag.html"
+                    (render-file template-path
                                  (merge params
                                         {:active-page     "tags"
                                          :selmer/context  (cryogen-io/path "/" blog-prefix "/")
