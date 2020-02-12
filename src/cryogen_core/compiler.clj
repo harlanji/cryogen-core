@@ -23,27 +23,63 @@
 
 (def content-root "content")
 
+(def default-role :public)
+
+(def current-role (if-let [ispooge-role (System/getenv "ISPOOGE_ROLE")]
+                    (keyword ispooge-role)
+                    default-role))
+
 (defn re-pattern-from-ext
   "Creates a properly quoted regex pattern for the given file extension"
   [ext]
   (re-pattern (str (string/replace ext "." "\\.") "$")))
+
+(defn exclude-restricted
+  "Mock implementation that filters ACL for an asset path.
+
+  Right now it's hard coded to only work for a particular file and
+  role=private, and to read the current role form the Java env 
+  var ISPOOGE_ROLE.  
+  
+  Run with `ISPOOGE_ROLE=private lein do clean, ring server-headless`
+  
+  We could try using a content sub-dir per role and hard links, rather than reading...
+  "
+  [ignored-files acl asset]
+  (println "Checking asset for ACL: " (blue (str asset)))
+
+  (let [page-meta (if (= (str asset) "content/posts/2019-10-30-orb-vinyl-vol70.md")
+                      {:acl [[:ALLOW :private] [:DENY :ALL]]}
+                      {})
+        acl (:acl page-meta)
+        ]
+        (println "ACL:" (str acl))
+    (when (or (empty? acl)
+              (some #(or (= [:ALLOW current-role] %)
+                         (= [:ALLOW :ALL] %)) acl))
+      asset)))
 
 (defn find-entries
   "Returns a list of files under the content directory according to the
   implemented Markup protocol and specified root directory. It defaults to
   looking under the implemented protocol's subdirectory, but fallsback to look
   at the content directory."
-  [root mu ignored-files]
+  ([root mu ignored-files]
+    (find-entries root mu ignored-files []))
+  
+  ([root mu ignored-files acl]
   (let [assets (cryogen-io/find-assets
                  (cryogen-io/path content-root (m/dir mu) root)
                  (m/ext mu)
-                 ignored-files)]
-    (if (seq assets)
+                 ignored-files)
+        exclude-restricted-here (partial exclude-restricted ignored-files acl)]
+    (filter exclude-restricted-here
+      (if (seq assets)
       assets
       (cryogen-io/find-assets
         (cryogen-io/path content-root root)
         (m/ext mu)
-        ignored-files))))
+        ignored-files))))))
 
 (defn find-posts
   "Returns a list of markdown files representing posts under the post root."
